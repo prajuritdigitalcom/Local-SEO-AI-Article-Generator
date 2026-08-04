@@ -2,17 +2,22 @@ import fs from 'fs';
 import path from 'path';
 import { Batch, GenerationItem } from '../types';
 
-const DATA_DIR = path.join(process.cwd(), 'data');
+const isVercel = process.env.VERCEL === '1' || Boolean(process.env.NOW_REGION);
+const DATA_DIR = isVercel ? path.join('/tmp', 'data') : path.join(process.cwd(), 'data');
 const BATCHES_FILE = path.join(DATA_DIR, 'batches.json');
 const RETENTION_DAYS = 30;
 
 // Ensure data directory exists
-if (!fs.existsSync(DATA_DIR)) {
-  fs.mkdirSync(DATA_DIR, { recursive: true });
-}
+try {
+  if (!fs.existsSync(DATA_DIR)) {
+    fs.mkdirSync(DATA_DIR, { recursive: true });
+  }
 
-if (!fs.existsSync(BATCHES_FILE)) {
-  fs.writeFileSync(BATCHES_FILE, JSON.stringify([]), 'utf8');
+  if (!fs.existsSync(BATCHES_FILE)) {
+    fs.writeFileSync(BATCHES_FILE, JSON.stringify([]), 'utf8');
+  }
+} catch (err) {
+  console.warn('[ServerStorage] Warning initializing storage directory:', err);
 }
 
 export function getAllBatches(): Batch[] {

@@ -300,12 +300,30 @@ app.get('/api/batches', (req, res) => {
   res.json(summaries);
 });
 
+function ensurePendingItemsQueued(batch: Batch, userKeys: string[]) {
+  if (!batch || batch.status === 'completed') return;
+
+  const pendingItems = batch.items.filter((i) => i.status === 'pending');
+  for (const item of pendingItems) {
+    const isAlreadyQueued = jobQueue.some(
+      (j) => j.batchId === batch.id && j.itemId === item.id
+    );
+    if (!isAlreadyQueued) {
+      enqueueJob(batch.id, item.id, userKeys);
+    }
+  }
+}
+
 // Get single batch
 app.get('/api/batch/:batchId', (req, res) => {
   const batch = getBatchById(req.params.batchId);
   if (!batch) {
     return res.status(404).json({ error: 'Batch tidak ditemukan' });
   }
+
+  const userKeys = parseUserKeys(req.headers['x-user-gemini-key']);
+  ensurePendingItemsQueued(batch, userKeys);
+
   res.json(batch);
 });
 
@@ -523,16 +541,24 @@ app.post('/api/batch/:batchId/edit/:itemId', (req: Request, res: Response) => {
 });
 
 // Catch-all untuk request /api/* yang tidak cocok dengan route manapun (semua method).
-// Tanpa ini, path API yang salah/tidak ada akan jatuh ke fallback HTML SPA (atau
-// halaman error HTML default Express), dan res.json() di frontend akan gagal
-// dengan "Unexpected token ... is not valid JSON".
 app.all('/api/*', (req: Request, res: Response) => {
   res.status(404).json({ error: `Endpoint API tidak ditemukan: ${req.method} ${req.path}` });
 });
 
-// Start server
+// Error handler global Express
+app.use((err: any, req: Request, res: Response, next: express.NextFunction) => {
+  console.error('[Unhandled Express Error]', err?.message || err, err?.stack || '');
+  const status = err?.status || err?.statusCode || 500;
+  res.status(status).json({
+    error:
+      status === 400
+        ? 'Request tidak valid (format data salah).'
+        : 'Terjadi kesalahan tak terduga di server.',
+  });
+});
+
+// Start server (hanya jika bukan di Vercel serverless function)
 async function startServer() {
-  // Vite integration
   if (process.env.NODE_ENV !== 'production') {
     const vite = await createViteServer({
       server: { middlewareMode: true },
@@ -547,26 +573,13 @@ async function startServer() {
     });
   }
 
-  // Error handler global Express (wajib 4 parameter agar dikenali Express, dan
-  // WAJIB didaftarkan PALING TERAKHIR agar bisa menangkap error dari semua
-  // middleware/route di atasnya — termasuk error body JSON tidak valid dari
-  // express.json() dan error dari static/Vite middleware). Tanpa ini, Express
-  // jatuh ke halaman error HTML default-nya, yang menyebabkan res.json() di
-  // frontend gagal dengan "Unexpected token ... is not valid JSON".
-  app.use((err: any, req: Request, res: Response, next: express.NextFunction) => {
-    console.error('[Unhandled Express Error]', err?.message || err, err?.stack || '');
-    const status = err?.status || err?.statusCode || 500;
-    res.status(status).json({
-      error:
-        status === 400
-          ? 'Request tidak valid (format data salah).'
-          : 'Terjadi kesalahan tak terduga di server.',
-    });
-  });
-
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`AI Local SEO Article Generator server running on http://0.0.0.0:${PORT}`);
   });
 }
 
-startServer();
+if (process.env.VERCEL !== '1' && !process.env.NOW_REGION) {
+  startServer();
+}
+
+export default app;

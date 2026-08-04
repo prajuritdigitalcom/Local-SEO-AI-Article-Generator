@@ -270,7 +270,7 @@ export const FormInputSection: React.FC<FormInputSectionProps> = ({
 
             <p className="text-xs text-slate-500">
               {targetWordCount === 'random'
-                ? 'Setiap artikel di batch akan secara acak berdurasi 300 s/d 1000 kata agar tidak monoton.'
+                ? 'Pilihan "Acak" otomatis membuat jumlah kata tiap artikel berbeda-beda.'
                 : `Target sekitar ${targetWordCount} kata per artikel (toleransi ±15%).`}
             </p>
           </div>

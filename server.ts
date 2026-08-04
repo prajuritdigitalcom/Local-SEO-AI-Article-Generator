@@ -63,8 +63,20 @@ function getServerKeys(): string[] {
 
 function parseUserKeys(headerValue?: string | string[]): string[] {
   if (!headerValue) return [];
-  const str = Array.isArray(headerValue) ? headerValue.join(',') : headerValue;
-  return str.split(',').map((k) => k.trim()).filter(Boolean);
+  const rawStr = Array.isArray(headerValue) ? headerValue.join(',') : headerValue;
+  try {
+    const decoded = decodeURIComponent(rawStr);
+    return decoded
+      .split(/[\n\r,]+/)
+      .map((k) => k.trim())
+      .filter(Boolean);
+  } catch (err) {
+    console.warn('[Vercel/Server Log] Gagal decode x-user-gemini-key header:', err);
+    return rawStr
+      .split(/[\n\r,]+/)
+      .map((k) => k.trim())
+      .filter(Boolean);
+  }
 }
 
 async function callGeminiWithRotation(params: {
@@ -222,7 +234,7 @@ async function executeTask(task: JobTask) {
   } catch (err: any) {
     const durationMs = Date.now() - startTime;
     const errMsg = err?.message || String(err);
-    console.error(`[Task Execution Error] Item ${itemId} failed:`, errMsg);
+    console.error(`[Vercel/Server Log] Task Execution Error for item ${itemId} (batch ${batchId}):`, errMsg, err?.stack || '');
 
     let errorReason = 'Gagal menghasilkan artikel dari AI.';
     if (errMsg.includes('NO_API_KEYS_CONFIGURED')) {

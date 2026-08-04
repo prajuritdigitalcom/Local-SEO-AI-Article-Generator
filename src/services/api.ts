@@ -1,97 +1,148 @@
 import { Batch, CreateBatchInput, ServerKeyStatus } from '../types';
 
 function getCustomApiKeyHeader(): Record<string, string> {
-  const key = sessionStorage.getItem('gemini_custom_api_keys') || localStorage.getItem('gemini_custom_api_keys') || '';
-  if (key) {
-    return { 'X-User-Gemini-Key': key };
+  const rawKey =
+    sessionStorage.getItem('gemini_custom_api_keys') ||
+    localStorage.getItem('gemini_custom_api_keys') ||
+    '';
+  if (!rawKey) return {};
+
+  // Split by newline or comma, trim spaces, and join into a clean single string
+  const cleanKeys = rawKey
+    .split(/[\n\r,]+/)
+    .map((k) => k.trim())
+    .filter(Boolean)
+    .join(',');
+
+  if (cleanKeys) {
+    // encodeURIComponent prevents HTTP header invalid value errors in browser fetch()
+    return { 'X-User-Gemini-Key': encodeURIComponent(cleanKeys) };
   }
   return {};
 }
 
 export async function getServerKeyStatus(): Promise<ServerKeyStatus> {
-  const res = await fetch('/api/settings/keys');
-  if (!res.ok) {
-    throw new Error('Gagal mengambil status API Key server');
+  try {
+    const res = await fetch('/api/settings/keys');
+    if (!res.ok) {
+      throw new Error('Gagal mengambil status API Key server');
+    }
+    return res.json();
+  } catch (err) {
+    console.error('[Vercel/Log] Error fetching server key status:', err);
+    throw err;
   }
-  return res.json();
 }
 
 export async function createBatch(input: CreateBatchInput): Promise<{ batchId: string; totalItems: number }> {
-  const headers = {
-    'Content-Type': 'application/json',
-    ...getCustomApiKeyHeader(),
-  };
+  try {
+    const headers = {
+      'Content-Type': 'application/json',
+      ...getCustomApiKeyHeader(),
+    };
 
-  const res = await fetch('/api/batch/create', {
-    method: 'POST',
-    headers,
-    body: JSON.stringify(input),
-  });
+    const res = await fetch('/api/batch/create', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(input),
+    });
 
-  const data = await res.json();
-  if (!res.ok) {
-    throw new Error(data.error || 'Gagal membuat batch generate artikel.');
+    const data = await res.json();
+    if (!res.ok) {
+      console.error('[Vercel/Log] createBatch failed:', data);
+      throw new Error(data.error || 'Gagal membuat batch generate artikel.');
+    }
+
+    return data;
+  } catch (err: any) {
+    console.error('[Vercel/Log] createBatch exception:', err);
+    throw err;
   }
-
-  return data;
 }
 
 export async function fetchBatch(batchId: string): Promise<Batch> {
-  const res = await fetch(`/api/batch/${batchId}`);
-  if (!res.ok) {
-    throw new Error('Batch tidak ditemukan.');
+  try {
+    const res = await fetch(`/api/batch/${batchId}`);
+    if (!res.ok) {
+      throw new Error('Batch tidak ditemukan.');
+    }
+    return res.json();
+  } catch (err) {
+    console.error(`[Vercel/Log] fetchBatch exception for batch ${batchId}:`, err);
+    throw err;
   }
-  return res.json();
 }
 
 export async function fetchRecentBatches(): Promise<any[]> {
-  const res = await fetch('/api/batches');
-  if (!res.ok) {
-    throw new Error('Gagal mengambil daftar batch.');
+  try {
+    const res = await fetch('/api/batches');
+    if (!res.ok) {
+      throw new Error('Gagal mengambil daftar batch.');
+    }
+    return res.json();
+  } catch (err) {
+    console.error('[Vercel/Log] fetchRecentBatches exception:', err);
+    throw err;
   }
-  return res.json();
 }
 
 export async function deleteBatch(batchId: string): Promise<void> {
-  const res = await fetch(`/api/batch/${batchId}`, {
-    method: 'DELETE',
-  });
-  if (!res.ok) {
-    throw new Error('Gagal menghapus batch.');
+  try {
+    const res = await fetch(`/api/batch/${batchId}`, {
+      method: 'DELETE',
+    });
+    if (!res.ok) {
+      throw new Error('Gagal menghapus batch.');
+    }
+  } catch (err) {
+    console.error(`[Vercel/Log] deleteBatch exception for ${batchId}:`, err);
+    throw err;
   }
 }
 
 export async function retryItem(batchId: string, itemId: string): Promise<void> {
-  const headers = {
-    'Content-Type': 'application/json',
-    ...getCustomApiKeyHeader(),
-  };
+  try {
+    const headers = {
+      'Content-Type': 'application/json',
+      ...getCustomApiKeyHeader(),
+    };
 
-  const res = await fetch(`/api/batch/${batchId}/retry/${itemId}`, {
-    method: 'POST',
-    headers,
-  });
+    const res = await fetch(`/api/batch/${batchId}/retry/${itemId}`, {
+      method: 'POST',
+      headers,
+    });
 
-  if (!res.ok) {
-    const data = await res.json();
-    throw new Error(data.error || 'Gagal memproses ulang item.');
+    if (!res.ok) {
+      const data = await res.json();
+      console.error('[Vercel/Log] retryItem error:', data);
+      throw new Error(data.error || 'Gagal memproses ulang item.');
+    }
+  } catch (err) {
+    console.error(`[Vercel/Log] retryItem exception for item ${itemId}:`, err);
+    throw err;
   }
 }
 
 export async function regenerateItem(batchId: string, itemId: string): Promise<void> {
-  const headers = {
-    'Content-Type': 'application/json',
-    ...getCustomApiKeyHeader(),
-  };
+  try {
+    const headers = {
+      'Content-Type': 'application/json',
+      ...getCustomApiKeyHeader(),
+    };
 
-  const res = await fetch(`/api/batch/${batchId}/regenerate/${itemId}`, {
-    method: 'POST',
-    headers,
-  });
+    const res = await fetch(`/api/batch/${batchId}/regenerate/${itemId}`, {
+      method: 'POST',
+      headers,
+    });
 
-  if (!res.ok) {
-    const data = await res.json();
-    throw new Error(data.error || 'Gagal meng-generate ulang artikel.');
+    if (!res.ok) {
+      const data = await res.json();
+      console.error('[Vercel/Log] regenerateItem error:', data);
+      throw new Error(data.error || 'Gagal meng-generate ulang artikel.');
+    }
+  } catch (err) {
+    console.error(`[Vercel/Log] regenerateItem exception for item ${itemId}:`, err);
+    throw err;
   }
 }
 

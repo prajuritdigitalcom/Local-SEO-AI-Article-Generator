@@ -7,16 +7,15 @@ function getCustomApiKeyHeader(): Record<string, string> {
     '';
   if (!rawKey) return {};
 
-  // Split by newline or comma, trim spaces, and join into a clean single string
+  // Extract clean valid API key strings (only valid ASCII letters, numbers, hyphens, underscores)
   const cleanKeys = rawKey
     .split(/[\n\r,]+/)
-    .map((k) => k.trim())
+    .map((k) => k.replace(/[^a-zA-Z0-9\-_]/g, '').trim())
     .filter(Boolean)
     .join(',');
 
   if (cleanKeys) {
-    // encodeURIComponent prevents HTTP header invalid value errors in browser fetch()
-    return { 'X-User-Gemini-Key': encodeURIComponent(cleanKeys) };
+    return { 'X-User-Gemini-Key': cleanKeys };
   }
   return {};
 }

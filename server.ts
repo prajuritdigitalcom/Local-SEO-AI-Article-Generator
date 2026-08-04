@@ -64,19 +64,16 @@ function getServerKeys(): string[] {
 function parseUserKeys(headerValue?: string | string[]): string[] {
   if (!headerValue) return [];
   const rawStr = Array.isArray(headerValue) ? headerValue.join(',') : headerValue;
+  let textToParse = rawStr;
   try {
-    const decoded = decodeURIComponent(rawStr);
-    return decoded
-      .split(/[\n\r,]+/)
-      .map((k) => k.trim())
-      .filter(Boolean);
+    textToParse = decodeURIComponent(rawStr);
   } catch (err) {
-    console.warn('[Vercel/Server Log] Gagal decode x-user-gemini-key header:', err);
-    return rawStr
-      .split(/[\n\r,]+/)
-      .map((k) => k.trim())
-      .filter(Boolean);
+    textToParse = rawStr;
   }
+  return textToParse
+    .split(/[\n\r,]+/)
+    .map((k) => k.replace(/[^a-zA-Z0-9\-_]/g, '').trim())
+    .filter(Boolean);
 }
 
 async function callGeminiWithRotation(params: {

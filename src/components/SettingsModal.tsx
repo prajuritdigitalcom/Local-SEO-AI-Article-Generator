@@ -16,23 +16,19 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   onKeysChanged,
 }) => {
   const [userKeysInput, setUserKeysInput] = useState('');
-  const [rememberKey, setRememberKey] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
-      const sessionKey = sessionStorage.getItem('gemini_custom_api_keys') || '';
       const localKey = localStorage.getItem('gemini_custom_api_keys') || '';
+      const sessionKey = sessionStorage.getItem('gemini_custom_api_keys') || '';
 
       if (localKey) {
         setUserKeysInput(localKey);
-        setRememberKey(true);
       } else if (sessionKey) {
         setUserKeysInput(sessionKey);
-        setRememberKey(false);
       } else {
         setUserKeysInput('');
-        setRememberKey(false);
       }
     }
   }, [isOpen]);
@@ -44,16 +40,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     const trimmed = userKeysInput.trim();
 
     if (trimmed) {
-      if (rememberKey) {
-        localStorage.setItem('gemini_custom_api_keys', trimmed);
-        sessionStorage.removeItem('gemini_custom_api_keys');
-      } else {
-        sessionStorage.setItem('gemini_custom_api_keys', trimmed);
-        localStorage.removeItem('gemini_custom_api_keys');
-      }
-    } else {
+      localStorage.setItem('gemini_custom_api_keys', trimmed);
       sessionStorage.removeItem('gemini_custom_api_keys');
+    } else {
       localStorage.removeItem('gemini_custom_api_keys');
+      sessionStorage.removeItem('gemini_custom_api_keys');
     }
 
     setSaveSuccess(true);
@@ -65,8 +56,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   };
 
   const handleClear = () => {
-    sessionStorage.removeItem('gemini_custom_api_keys');
     localStorage.removeItem('gemini_custom_api_keys');
+    sessionStorage.removeItem('gemini_custom_api_keys');
     setUserKeysInput('');
     onKeysChanged();
   };
@@ -131,21 +122,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               />
             </div>
 
-            {/* Remember Checkbox */}
-            <div className="flex items-start space-x-2 pt-1">
-              <input
-                type="checkbox"
-                id="rememberKey"
-                checked={rememberKey}
-                onChange={(e) => setRememberKey(e.target.checked)}
-                className="mt-0.5 rounded border-slate-800 bg-slate-950 text-indigo-600 focus:ring-indigo-500"
-              />
-              <label htmlFor="rememberKey" className="text-xs text-slate-300 cursor-pointer">
-                Ingat key ini di perangkat ini (Simpan di <code className="text-indigo-300">localStorage</code>).
-                <span className="block text-[11px] text-slate-500 mt-0.5">
-                  Secara default, key disimpan di <code className="text-slate-400">sessionStorage</code> dan otomatis terhapus saat browser ditutup.
-                </span>
-              </label>
+            {/* Default Storage Notice */}
+            <div className="p-3 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-300 flex items-center space-x-2">
+              <Shield className="w-4 h-4 text-indigo-400 shrink-0" />
+              <span>
+                API Key tersimpan otomatis secara default di browser (<code className="text-indigo-300">localStorage</code>) sehingga siap digunakan kembali kapan saja.
+              </span>
             </div>
 
             {/* Security note */}

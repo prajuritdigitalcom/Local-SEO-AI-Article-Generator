@@ -12,22 +12,18 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   onKeysChanged,
 }) => {
   const [userKeysInput, setUserKeysInput] = useState('');
-  const [rememberKey, setRememberKey] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
 
   useEffect(() => {
-    const sessionKey = sessionStorage.getItem('gemini_custom_api_keys') || '';
     const localKey = localStorage.getItem('gemini_custom_api_keys') || '';
+    const sessionKey = sessionStorage.getItem('gemini_custom_api_keys') || '';
 
     if (localKey) {
       setUserKeysInput(localKey);
-      setRememberKey(true);
     } else if (sessionKey) {
       setUserKeysInput(sessionKey);
-      setRememberKey(false);
     } else {
       setUserKeysInput('');
-      setRememberKey(false);
     }
   }, []);
 
@@ -36,16 +32,11 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     const trimmed = userKeysInput.trim();
 
     if (trimmed) {
-      if (rememberKey) {
-        localStorage.setItem('gemini_custom_api_keys', trimmed);
-        sessionStorage.removeItem('gemini_custom_api_keys');
-      } else {
-        sessionStorage.setItem('gemini_custom_api_keys', trimmed);
-        localStorage.removeItem('gemini_custom_api_keys');
-      }
-    } else {
+      localStorage.setItem('gemini_custom_api_keys', trimmed);
       sessionStorage.removeItem('gemini_custom_api_keys');
+    } else {
       localStorage.removeItem('gemini_custom_api_keys');
+      sessionStorage.removeItem('gemini_custom_api_keys');
     }
 
     setSaveSuccess(true);
@@ -56,8 +47,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   };
 
   const handleClear = () => {
-    sessionStorage.removeItem('gemini_custom_api_keys');
     localStorage.removeItem('gemini_custom_api_keys');
+    sessionStorage.removeItem('gemini_custom_api_keys');
     setUserKeysInput('');
     onKeysChanged();
   };
@@ -127,21 +118,12 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           />
         </div>
 
-        {/* Remember Checkbox */}
-        <div className="flex items-start space-x-2.5 pt-1">
-          <input
-            type="checkbox"
-            id="rememberKey"
-            checked={rememberKey}
-            onChange={(e) => setRememberKey(e.target.checked)}
-            className="mt-0.5 rounded border-slate-300 text-[#fe4c6f] focus:ring-[#fe4c6f]"
-          />
-          <label htmlFor="rememberKey" className="text-xs text-slate-700 cursor-pointer">
-            Ingat key ini di browser ini (Simpan di <code className="font-mono text-slate-800 font-semibold bg-slate-100 px-1 py-0.5 rounded">localStorage</code>)
-            <span className="block text-[11px] text-slate-500 mt-0.5">
-              Jika tidak dicentang, key disimpan sementara di <code className="font-mono">sessionStorage</code> dan terhapus saat tab ditutup.
-            </span>
-          </label>
+        {/* Default Storage Notice */}
+        <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-600 flex items-center space-x-2">
+          <Shield className="w-4 h-4 text-[#fe4c6f] shrink-0" />
+          <span>
+            API Key tersimpan otomatis secara default di browser (<code className="font-mono text-slate-800 font-semibold bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">localStorage</code>) sehingga siap digunakan kembali kapan saja.
+          </span>
         </div>
 
         {/* Security Notice */}

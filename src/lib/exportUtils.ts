@@ -1,6 +1,6 @@
 import Papa from 'papaparse';
 import * as XLSX from 'xlsx';
-import { Batch } from '../types';
+import { Batch } from '../types.js';
 
 export function getExportRows(batch: Batch) {
   return batch.items.map((item) => ({

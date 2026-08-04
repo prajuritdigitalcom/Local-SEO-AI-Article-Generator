@@ -223,11 +223,11 @@ export const FormInputSection: React.FC<FormInputSectionProps> = ({
               onChange={(e) => setLanguageStyle(e.target.value as LanguageStyle)}
               className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-semibold text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#fe4c6f]/30 focus:border-[#fe4c6f] transition-all cursor-pointer"
             >
-              <option value="acak">🎲 Acak / Rotasi Otomatis (Direkomendasikan Variasi Max)</option>
-              <option value="formal-informatif">📘 Formal-Informatif (Edukatif & Profesional)</option>
-              <option value="personal-storytelling">📖 Personal / Storytelling (Pembuka Cerita Warm)</option>
-              <option value="to-the-point-persuasif">⚡ To-the-Point / Persuasif (Lugas & Urgensi)</option>
-              <option value="konsultatif">💬 Konsultatif / Tanya-Jawab (Empatik & Solutif)</option>
+              <option value="acak">Acak / Rotasi Otomatis (Direkomendasikan Variasi Max)</option>
+              <option value="formal-informatif">Formal-Informatif (Edukatif & Profesional)</option>
+              <option value="personal-storytelling">Personal / Storytelling (Pembuka Cerita Warm)</option>
+              <option value="to-the-point-persuasif">To-the-Point / Persuasif (Lugas & Urgensi)</option>
+              <option value="konsultatif">Konsultatif / Tanya-Jawab (Empatik & Solutif)</option>
             </select>
             <p className="text-xs text-slate-500">
               Pilihan "Acak" otomatis merotasi gaya bahasa pada tiap artikel dalam batch.
@@ -261,11 +261,11 @@ export const FormInputSection: React.FC<FormInputSectionProps> = ({
               }}
               className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-semibold text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#fe4c6f]/30 focus:border-[#fe4c6f] transition-all cursor-pointer"
             >
-              <option value="random">🎲 Random / Acak (Beda-beda per Artikel)</option>
-              <option value="300">📄 ~300 Kata (Ringkas)</option>
-              <option value="500">📑 ~500 Kata (Standar)</option>
-              <option value="700">📚 ~700 Kata (Mendalam)</option>
-              <option value="1000">📖 ~1000 Kata (Panjang / Komprehensif)</option>
+              <option value="random">Random / Acak (Beda-beda per Artikel)</option>
+              <option value="300">~300 Kata (Ringkas)</option>
+              <option value="500">~500 Kata (Standar)</option>
+              <option value="700">~700 Kata (Mendalam)</option>
+              <option value="1000">~1000 Kata (Panjang / Komprehensif)</option>
             </select>
 
             <p className="text-xs text-slate-500">

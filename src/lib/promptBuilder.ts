@@ -1,4 +1,4 @@
-import { LanguageStyle, VariationSeed } from '../types';
+import { LanguageStyle, VariationSeed } from '../types.js';
 
 /**
  * Common Indonesian location keywords and pattern heuristics to check

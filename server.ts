@@ -11,15 +11,15 @@ import {
   updateBatchItem,
   deleteBatch,
   cleanupOldBatches,
-} from './src/lib/serverStorage';
+} from './src/lib/serverStorage.js';
 import {
   buildPrompt,
   cleanupArticle,
   countWords,
   detectLocationContext,
   generateVariationSeed,
-} from './src/lib/promptBuilder';
-import { Batch, GenerationItem, CreateBatchInput } from './src/types';
+} from './src/lib/promptBuilder.js';
+import { Batch, GenerationItem, CreateBatchInput } from './src/types.js';
 
 dotenv.config();
 

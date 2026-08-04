@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import { Batch, GenerationItem } from '../types';
+import { Batch, GenerationItem } from '../types.js';
 
 const isVercel = process.env.VERCEL === '1' || Boolean(process.env.NOW_REGION);
 const DATA_DIR = isVercel ? path.join('/tmp', 'data') : path.join(process.cwd(), 'data');

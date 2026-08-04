@@ -112,10 +112,19 @@ async function callGeminiWithRotation(params: {
         },
       });
 
-      const response = await ai.models.generateContent({
-        model: 'gemini-3.6-flash',
-        contents: promptText,
-      });
+      // Guard supaya request yang menggantung tidak memblokir worker queue
+      // selamanya — jika Gemini tidak merespons dalam 90 detik, batalkan
+      // percobaan key ini (lanjut ke key berikutnya, atau gagal dengan jelas).
+      const GENERATION_TIMEOUT_MS = 90_000;
+      const response = await Promise.race([
+        ai.models.generateContent({
+          model: 'gemini-3.6-flash',
+          contents: promptText,
+        }),
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('GENERATION_TIMEOUT')), GENERATION_TIMEOUT_MS)
+        ),
+      ]);
 
       const text = response.text || '';
       if (!text) {
@@ -238,6 +247,8 @@ async function executeTask(task: JobTask) {
       errorReason = 'Belum ada API Key Gemini aktif (Server atau User).';
     } else if (errMsg.includes('ALL_KEYS_EXHAUSTED') || errMsg.includes('429') || errMsg.includes('RESOURCE_EXHAUSTED')) {
       errorReason = 'Semua API Key Gemini sedang mencapai limit kuota. Silakan coba lagi sebentar.';
+    } else if (errMsg.includes('GENERATION_TIMEOUT')) {
+      errorReason = 'Gemini API tidak merespons dalam waktu wajar (timeout). Silakan coba lagi.';
     }
 
     updatedBatch = updateBatchItem(batchId, itemId, (i) => ({
@@ -511,6 +522,14 @@ app.post('/api/batch/:batchId/edit/:itemId', (req: Request, res: Response) => {
   res.json(updatedBatch);
 });
 
+// Catch-all untuk request /api/* yang tidak cocok dengan route manapun (semua method).
+// Tanpa ini, path API yang salah/tidak ada akan jatuh ke fallback HTML SPA (atau
+// halaman error HTML default Express), dan res.json() di frontend akan gagal
+// dengan "Unexpected token ... is not valid JSON".
+app.all('/api/*', (req: Request, res: Response) => {
+  res.status(404).json({ error: `Endpoint API tidak ditemukan: ${req.method} ${req.path}` });
+});
+
 // Start server
 async function startServer() {
   // Vite integration
@@ -527,6 +546,23 @@ async function startServer() {
       res.sendFile(path.join(distPath, 'index.html'));
     });
   }
+
+  // Error handler global Express (wajib 4 parameter agar dikenali Express, dan
+  // WAJIB didaftarkan PALING TERAKHIR agar bisa menangkap error dari semua
+  // middleware/route di atasnya — termasuk error body JSON tidak valid dari
+  // express.json() dan error dari static/Vite middleware). Tanpa ini, Express
+  // jatuh ke halaman error HTML default-nya, yang menyebabkan res.json() di
+  // frontend gagal dengan "Unexpected token ... is not valid JSON".
+  app.use((err: any, req: Request, res: Response, next: express.NextFunction) => {
+    console.error('[Unhandled Express Error]', err?.message || err, err?.stack || '');
+    const status = err?.status || err?.statusCode || 500;
+    res.status(status).json({
+      error:
+        status === 400
+          ? 'Request tidak valid (format data salah).'
+          : 'Terjadi kesalahan tak terduga di server.',
+    });
+  });
 
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`AI Local SEO Article Generator server running on http://0.0.0.0:${PORT}`);

@@ -1,5 +1,38 @@
 import { Batch, CreateBatchInput, ServerKeyStatus } from '../types';
 
+/**
+ * Parse Response fetch() sebagai JSON secara aman.
+ *
+ * Jika server (atau proxy/CDN di depannya) mengembalikan sesuatu yang bukan
+ * JSON — halaman error HTML, teks "Not Found", body kosong, dsb — res.json()
+ * akan melempar error mentah seperti:
+ *   Unexpected token 'T', "The page c"... is not valid JSON
+ * Fungsi ini membaca body sebagai teks dulu, dan jika bukan JSON valid,
+ * melempar error yang jelas dan actionable (termasuk status HTTP-nya).
+ */
+async function safeParseResponse(res: Response): Promise<any> {
+  const rawText = await res.text();
+
+  if (!rawText) {
+    if (res.ok) return {};
+    throw new Error(`Server mengembalikan respons kosong (HTTP ${res.status}).`);
+  }
+
+  try {
+    return JSON.parse(rawText);
+  } catch {
+    console.error(
+      `[Vercel/Log] Non-JSON response (HTTP ${res.status}) from ${res.url}:`,
+      rawText.slice(0, 300)
+    );
+    throw new Error(
+      `Server mengembalikan respons yang tidak valid (HTTP ${res.status}). ` +
+        'Kemungkinan endpoint API tidak ditemukan atau server backend belum berjalan dengan benar. ' +
+        'Coba muat ulang halaman; jika masih terjadi, periksa log server / konfigurasi deployment.'
+    );
+  }
+}
+
 function getCustomApiKeyHeader(): Record<string, string> {
   const rawKey =
     sessionStorage.getItem('gemini_custom_api_keys') ||
@@ -23,10 +56,11 @@ function getCustomApiKeyHeader(): Record<string, string> {
 export async function getServerKeyStatus(): Promise<ServerKeyStatus> {
   try {
     const res = await fetch('/api/settings/keys');
+    const data = await safeParseResponse(res);
     if (!res.ok) {
-      throw new Error('Gagal mengambil status API Key server');
+      throw new Error(data?.error || 'Gagal mengambil status API Key server');
     }
-    return res.json();
+    return data;
   } catch (err) {
     console.error('[Vercel/Log] Error fetching server key status:', err);
     throw err;
@@ -46,10 +80,10 @@ export async function createBatch(input: CreateBatchInput): Promise<{ batchId: s
       body: JSON.stringify(input),
     });
 
-    const data = await res.json();
+    const data = await safeParseResponse(res);
     if (!res.ok) {
       console.error('[Vercel/Log] createBatch failed:', data);
-      throw new Error(data.error || 'Gagal membuat batch generate artikel.');
+      throw new Error(data?.error || 'Gagal membuat batch generate artikel.');
     }
 
     return data;
@@ -62,10 +96,11 @@ export async function createBatch(input: CreateBatchInput): Promise<{ batchId: s
 export async function fetchBatch(batchId: string): Promise<Batch> {
   try {
     const res = await fetch(`/api/batch/${batchId}`);
+    const data = await safeParseResponse(res);
     if (!res.ok) {
-      throw new Error('Batch tidak ditemukan.');
+      throw new Error(data?.error || 'Batch tidak ditemukan.');
     }
-    return res.json();
+    return data;
   } catch (err) {
     console.error(`[Vercel/Log] fetchBatch exception for batch ${batchId}:`, err);
     throw err;
@@ -75,10 +110,11 @@ export async function fetchBatch(batchId: string): Promise<Batch> {
 export async function fetchRecentBatches(): Promise<any[]> {
   try {
     const res = await fetch('/api/batches');
+    const data = await safeParseResponse(res);
     if (!res.ok) {
-      throw new Error('Gagal mengambil daftar batch.');
+      throw new Error(data?.error || 'Gagal mengambil daftar batch.');
     }
-    return res.json();
+    return data;
   } catch (err) {
     console.error('[Vercel/Log] fetchRecentBatches exception:', err);
     throw err;
@@ -90,8 +126,9 @@ export async function deleteBatch(batchId: string): Promise<void> {
     const res = await fetch(`/api/batch/${batchId}`, {
       method: 'DELETE',
     });
+    const data = await safeParseResponse(res);
     if (!res.ok) {
-      throw new Error('Gagal menghapus batch.');
+      throw new Error(data?.error || 'Gagal menghapus batch.');
     }
   } catch (err) {
     console.error(`[Vercel/Log] deleteBatch exception for ${batchId}:`, err);
@@ -111,10 +148,10 @@ export async function retryItem(batchId: string, itemId: string): Promise<void> 
       headers,
     });
 
+    const data = await safeParseResponse(res);
     if (!res.ok) {
-      const data = await res.json();
       console.error('[Vercel/Log] retryItem error:', data);
-      throw new Error(data.error || 'Gagal memproses ulang item.');
+      throw new Error(data?.error || 'Gagal memproses ulang item.');
     }
   } catch (err) {
     console.error(`[Vercel/Log] retryItem exception for item ${itemId}:`, err);
@@ -134,10 +171,10 @@ export async function regenerateItem(batchId: string, itemId: string): Promise<v
       headers,
     });
 
+    const data = await safeParseResponse(res);
     if (!res.ok) {
-      const data = await res.json();
       console.error('[Vercel/Log] regenerateItem error:', data);
-      throw new Error(data.error || 'Gagal meng-generate ulang artikel.');
+      throw new Error(data?.error || 'Gagal meng-generate ulang artikel.');
     }
   } catch (err) {
     console.error(`[Vercel/Log] regenerateItem exception for item ${itemId}:`, err);
@@ -154,12 +191,12 @@ export async function updateItemArticle(batchId: string, itemId: string, article
     body: JSON.stringify({ article }),
   });
 
+  const data = await safeParseResponse(res);
   if (!res.ok) {
-    const data = await res.json();
-    throw new Error(data.error || 'Gagal menyimpan perubahan artikel.');
+    throw new Error(data?.error || 'Gagal menyimpan perubahan artikel.');
   }
 
-  return res.json();
+  return data;
 }
 
 export function subscribeToBatchStream(
